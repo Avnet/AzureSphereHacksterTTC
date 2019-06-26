@@ -312,6 +312,7 @@ int main(int argc, char *argv[])
 	// Initialize the ssid array
 	memset(ssid, 0, 128);
 	
+#if (defined(IOT_CENTRAL_APPLICATION) || defined(IOT_HUB_APPLICATION))
 	if (argc == 2) {
 		Log_Debug("Setting Azure Scope ID %s\n", argv[1]);
 		strncpy(scopeId, argv[1], SCOPEID_LENGTH);
@@ -320,6 +321,7 @@ int main(int argc, char *argv[])
 		Log_Debug("ScopeId needs to be set in the app_manifest CmdArgs\n");
 		return -1;
 	}
+#endif 
 
 	Log_Debug("Avnet Starter Kit Simple Reference Application starting.\n");
     if (InitPeripheralsAndHandlers() != 0) {

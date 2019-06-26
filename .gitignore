@@ -50,3 +50,6 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+/.vs
+/AvnetStarterKitReferenceDesign/bin/ARM/Debug
+/AvnetStarterKitReferenceDesign/obj/ARM/Debug
