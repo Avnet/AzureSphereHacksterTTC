@@ -81,6 +81,7 @@ static int buttonBGpioFd = -1;
 int userLedRedFd = -1;
 int userLedGreenFd = -1;
 int userLedBlueFd = -1;
+int appLedFd = -1;
 int wifiLedFd = -1;
 int clickSocket1Relay1Fd = -1;
 int clickSocket1Relay2Fd = -1;
@@ -90,7 +91,7 @@ int clickSocket1Relay2Fd = -1;
 char scopeId[SCOPEID_LENGTH]; // ScopeId for the Azure IoT Central application and DPS set in
 									 // app_manifest.json, CmdArgs
 
-
+									 
 // Button state variables, initilize them to button not-pressed (High)
 static GPIO_Value_Type buttonAState = GPIO_Value_High;
 static GPIO_Value_Type buttonBState = GPIO_Value_High;
@@ -311,7 +312,7 @@ int main(int argc, char *argv[])
 	char bssid[20];
 	// Initialize the ssid array
 	memset(ssid, 0, 128);
-	
+
 #if (defined(IOT_CENTRAL_APPLICATION) || defined(IOT_HUB_APPLICATION))
 	if (argc == 2) {
 		Log_Debug("Setting Azure Scope ID %s\n", argv[1]);
@@ -322,7 +323,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 #endif 
-
+	
 	Log_Debug("Avnet Starter Kit Simple Reference Application starting.\n");
     if (InitPeripheralsAndHandlers() != 0) {
         terminationRequired = true;
@@ -379,7 +380,7 @@ int main(int argc, char *argv[])
 #if (defined(IOT_CENTRAL_APPLICATION) || defined(IOT_HUB_APPLICATION))
 		if (iothubClientHandle != NULL && !versionStringSent) {
 
-#warning "If you need to upodate the version string do so in main.c ~line 375!"
+			#warning "If you need to upodate the version string do so in main.c ~line 375!"
 			checkAndUpdateDeviceTwin("versionString", "AvnetStarterKit-Hackster.io-V1.0", TYPE_STRING, false);
 			versionStringSent = true;
 		}

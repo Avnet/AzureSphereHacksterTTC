@@ -25,6 +25,7 @@
 bool userLedRedIsOn = false;
 bool userLedGreenIsOn = false;
 bool userLedBlueIsOn = false;
+bool appLedIsOn = false;
 bool wifiLedIsOn = false;
 bool clkBoardRelay1IsOn = true;
 bool clkBoardRelay2IsOn = true;
@@ -33,6 +34,7 @@ extern int userLedRedFd;
 extern int userLedGreenFd;
 extern int userLedBlueFd;
 
+extern int appLedFd;
 extern int wifiLedFd;
 extern int clickSocket1Relay1Fd;
 extern int clickSocket1Relay2Fd;
@@ -63,6 +65,7 @@ twin_t twinArray[] = {
 	{.twinKey = "userLedRed",.twinVar = &userLedRedIsOn,.twinFd = &userLedRedFd,.twinGPIO = MT3620_RDB_LED1_RED,.twinType = TYPE_BOOL,.active_high = false},
 	{.twinKey = "userLedGreen",.twinVar = &userLedGreenIsOn,.twinFd = &userLedGreenFd,.twinGPIO = MT3620_RDB_LED1_GREEN,.twinType = TYPE_BOOL,.active_high = false},
 	{.twinKey = "userLedBlue",.twinVar = &userLedBlueIsOn,.twinFd = &userLedBlueFd,.twinGPIO = MT3620_RDB_LED1_BLUE,.twinType = TYPE_BOOL,.active_high = false},
+	{.twinKey = "appLed",.twinVar = &appLedIsOn,.twinFd = &appLedFd,.twinGPIO = AVT_LED_APP,.twinType = TYPE_BOOL,.active_high = false},
 	{.twinKey = "wifiLed",.twinVar = &wifiLedIsOn,.twinFd = &wifiLedFd,.twinGPIO = AVT_LED_WIFI,.twinType = TYPE_BOOL,.active_high = false},
 	{.twinKey = "clickBoardRelay1",.twinVar = &clkBoardRelay1IsOn,.twinFd = &clickSocket1Relay1Fd,.twinGPIO = AVT_SK_CM1_CS,.twinType = TYPE_BOOL,.active_high = true},
 	{.twinKey = "clickBoardRelay2",.twinVar = &clkBoardRelay2IsOn,.twinFd = &clickSocket1Relay2Fd,.twinGPIO = AVT_SK_CM1_PWM,.twinType = TYPE_BOOL,.active_high = true}};
