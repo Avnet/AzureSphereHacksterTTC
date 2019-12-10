@@ -78,6 +78,7 @@ static int buttonPollTimerFd = -1;
 static int buttonAGpioFd = -1;
 static int buttonBGpioFd = -1;
 
+int appLedFd = -1;
 int userLedRedFd = -1;
 int userLedGreenFd = -1;
 int userLedBlueFd = -1;
