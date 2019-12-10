@@ -70,7 +70,6 @@ lsm6dso_ctx_t dev_ctx;
 lps22hh_ctx_t pressure_ctx;
 bool lps22hhDetected;
 
-
 //Extern variables
 int i2cFd = -1;
 extern int epollFd;
@@ -186,11 +185,9 @@ void AccelTimerEventHandler(EventData *eventData)
 	}
 	// LPS22HH was not detected
 	else {
-
 		Log_Debug("LPS22HH: Pressure     [hPa] : Not read!\r\n");
 		Log_Debug("LPS22HH: Temperature  [degC]: Not read!\r\n");
 	}
-
 
 #if (defined(IOT_CENTRAL_APPLICATION) || defined(IOT_HUB_APPLICATION))
 
@@ -206,8 +203,8 @@ void AccelTimerEventHandler(EventData *eventData)
 			}
 
 			// construct the telemetry message
-			snprintf(pjsonBuffer, JSON_BUFFER_SIZE, "{\"gX\":\"%.4lf\", \"gY\":\"%.4lf\", \"gZ\":\"%.4lf\", \"pressure\": \"%.2f\", \"aX\": \"%4.2f\", \"aY\": \"%4.2f\", \"aZ\": \"%4.2f\"}",
-				acceleration_mg[0], acceleration_mg[1], acceleration_mg[2], pressure_hPa, angular_rate_dps[0], angular_rate_dps[1], angular_rate_dps[2]);
+			snprintf(pjsonBuffer, JSON_BUFFER_SIZE, "{\"gX\":\"%.4lf\", \"gY\":\"%.4lf\", \"gZ\":\"%.4lf\", \"aX\": \"%4.2f\", \"aY\": \"%4.2f\", \"aZ\": \"%4.2f\"}",
+				acceleration_mg[0], acceleration_mg[1], acceleration_mg[2], angular_rate_dps[0], angular_rate_dps[1], angular_rate_dps[2]);
 
 			Log_Debug("\n[Info] Sending telemetry: %s\n", pjsonBuffer);
 			AzureIoT_SendMessage(pjsonBuffer);
@@ -346,13 +343,20 @@ int initI2c(void) {
 	// is stationary.
 
 	uint8_t reg;
-	
+
+
 	Log_Debug("LSM6DSO: Calibrating angular rate . . .\n"); 
 	Log_Debug("LSM6DSO: Please make sure the device is stationary.\n");
 
 	do {
-		// Read the calibration values
-		lsm6dso_gy_flag_data_ready_get(&dev_ctx, &reg);
+
+		// Delay and read the device until we have data!
+		do {
+			// Read the calibration values
+			HAL_Delay(5000);
+			lsm6dso_gy_flag_data_ready_get(&dev_ctx, &reg);
+		} while (!reg);
+
 		if (reg)
 		{
 			// Read angular rate field data to use for calibration offsets
@@ -360,11 +364,17 @@ int initI2c(void) {
 			lsm6dso_angular_rate_raw_get(&dev_ctx, raw_angular_rate_calibration.u8bit);
 		}
 
-		// Read the angular data rate again and verify that after applying the calibration, we have 0 angular rate in all directions
+		// Delay and read the device until we have data!
+		do {
+			// Read the calibration values
+			HAL_Delay(5000);
+			lsm6dso_gy_flag_data_ready_get(&dev_ctx, &reg);
+		} while (!reg);
 
-		lsm6dso_gy_flag_data_ready_get(&dev_ctx, &reg);
+		// Read the angular data rate again and verify that after applying the calibration, we have 0 angular rate in all directions
 		if (reg)
 		{
+
 			// Read angular rate field data
 			memset(data_raw_angular_rate.u8bit, 0x00, 3 * sizeof(int16_t));
 			lsm6dso_angular_rate_raw_get(&dev_ctx, data_raw_angular_rate.u8bit);
@@ -373,10 +383,11 @@ int initI2c(void) {
 			angular_rate_dps[0] = lsm6dso_from_fs2000_to_mdps(data_raw_angular_rate.i16bit[0] - raw_angular_rate_calibration.i16bit[0]);
 			angular_rate_dps[1] = lsm6dso_from_fs2000_to_mdps(data_raw_angular_rate.i16bit[1] - raw_angular_rate_calibration.i16bit[1]);
 			angular_rate_dps[2] = lsm6dso_from_fs2000_to_mdps(data_raw_angular_rate.i16bit[2] - raw_angular_rate_calibration.i16bit[2]);
+
 		}
 
-	// If the angular values after applying the offset are not zero, then do it again!
-	} while (angular_rate_dps[0] == angular_rate_dps[1] == angular_rate_dps[2] == 0.0);
+		// If the angular values after applying the offset are not all 0.0s, then do it again!
+	} while ((angular_rate_dps[0] != 0.0) || (angular_rate_dps[1] != 0.0) || (angular_rate_dps[2] != 0.0));
 
 	Log_Debug("LSM6DSO: Calibrating angular rate complete!\n");
 
@@ -571,65 +582,59 @@ static int32_t lsm6dso_write_lps22hh_cx(void* ctx, uint8_t reg, uint8_t* data,
 static int32_t lsm6dso_read_lps22hh_cx(void* ctx, uint8_t reg, uint8_t* data, uint16_t len)
 {
 	lsm6dso_sh_cfg_read_t sh_cfg_read;
-	axis3bit16_t data_raw_acceleration;
+	uint8_t buf_raw[6];
 	int32_t ret;
 	uint8_t drdy;
 	lsm6dso_status_master_t master_status;
 
 	/* Disable accelerometer. */
 	lsm6dso_xl_data_rate_set(&dev_ctx, LSM6DSO_XL_ODR_OFF);
-	
-	// For each byte we need to read from the lps22hh
-	for (int i = 0; i < len; i++) {
 
-		/* Configure Sensor Hub to read LPS22HH. */
-		sh_cfg_read.slv_add = (LPS22HH_I2C_ADD_L &0xFEU) >> 1; /* 7bit I2C address */
-		sh_cfg_read.slv_subadd = reg+i;
-		sh_cfg_read.slv_len = 1;
+	/* Configure Sensor Hub to read LPS22HH. */
+	sh_cfg_read.slv_add = (LPS22HH_I2C_ADD_L &0xFEU) >> 1; /* 7bit I2C address */
+	sh_cfg_read.slv_subadd = reg;
+	sh_cfg_read.slv_len = (uint8_t)len;
 
-		// Call the command to read the data from the sensor hub.
-		// This data will be read from the device connected to the 
-		// sensor hub, and saved into a register for us to read.
-		ret = lsm6dso_sh_slv0_cfg_read(&dev_ctx, &sh_cfg_read);
-		lsm6dso_sh_slave_connected_set(&dev_ctx, LSM6DSO_SLV_0);
+	// Call the command to read the data from the sensor hub.
+	// This data will be read from the device connected to the 
+	// sensor hub, and saved into a register for us to read.
+	ret = lsm6dso_sh_slv0_cfg_read(&dev_ctx, &sh_cfg_read);
+		
+	// Using slave 0 only
+	lsm6dso_sh_slave_connected_set(&dev_ctx, LSM6DSO_SLV_0);
 
-		/* Enable I2C Master and I2C master. */
-		lsm6dso_sh_master_set(&dev_ctx, PROPERTY_ENABLE);
+	/* Enable I2C Master */
+	lsm6dso_sh_master_set(&dev_ctx, PROPERTY_ENABLE);
 
-		/* Enable accelerometer to trigger Sensor Hub operation. */
-		lsm6dso_xl_data_rate_set(&dev_ctx, LSM6DSO_XL_ODR_104Hz);
+	/* Enable accelerometer to trigger Sensor Hub operation. */
+	lsm6dso_xl_data_rate_set(&dev_ctx, LSM6DSO_XL_ODR_104Hz);
 
-		/* Wait Sensor Hub operation flag set. */
-		lsm6dso_acceleration_raw_get(&dev_ctx, data_raw_acceleration.u8bit);
-		do {
-			HAL_Delay(20);
-			lsm6dso_xl_flag_data_ready_get(&dev_ctx, &drdy);
-		} while (!drdy);
+	/* Wait Sensor Hub operation flag set. */
+	lsm6dso_acceleration_raw_get(&dev_ctx, buf_raw);
+	do {
+		HAL_Delay(20);
+		lsm6dso_xl_flag_data_ready_get(&dev_ctx, &drdy);
+	} while (!drdy);
 
-		do {
-			HAL_Delay(20);
-			lsm6dso_sh_status_get(&dev_ctx, &master_status);
-		} while (!master_status.sens_hub_endop);
+	do {
+		HAL_Delay(20);
+		lsm6dso_sh_status_get(&dev_ctx, &master_status);
+	} while (!master_status.sens_hub_endop);
 
-		/* Disable I2C master and XL(trigger). */
-		lsm6dso_sh_master_set(&dev_ctx, PROPERTY_DISABLE);
-		lsm6dso_xl_data_rate_set(&dev_ctx, LSM6DSO_XL_ODR_OFF);
+	/* Disable I2C master and XL(trigger). */
+	lsm6dso_sh_master_set(&dev_ctx, PROPERTY_DISABLE);
+	lsm6dso_xl_data_rate_set(&dev_ctx, LSM6DSO_XL_ODR_OFF);
 
-		// Read the data from the device.  The call below reads
-		// all 18 sensor hub data.  We just need the data from 
-		// sensor hub 1, so copy that into our data array.
-		uint8_t buffer[18];
-		lsm6dso_sh_read_data_raw_get(&dev_ctx, buffer);
-		data[i] = buffer[1];
+	// Read the data from the device
+	lsm6dso_sh_read_data_raw_get(&dev_ctx, data, (uint8_t)len);
 
 #ifdef ENABLE_READ_WRITE_DEBUG
-		Log_Debug("Read %d bytes: ", len);
-		for (int i = 0; i < len; i++) {
-			Log_Debug("[%0x] ", data[i]);
-		}
-		Log_Debug("\n", len);
-#endif 
+	Log_Debug("Read %d bytes: ", len);
+	for (int i = 0; i < len; i++) {
+		Log_Debug("[%0x] ", data[i]);
 	}
+	Log_Debug("\n", len);
+#endif 
 
 	/* Re-enable accelerometer */
 	lsm6dso_xl_data_rate_set(&dev_ctx, LSM6DSO_XL_ODR_104Hz);
