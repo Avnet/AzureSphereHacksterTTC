@@ -54,3 +54,6 @@ dkms.conf
 /AvnetStarterKitReferenceDesign/bin/ARM/Debug
 /AvnetStarterKitReferenceDesign/obj/ARM/Debug
 /AvnetStarterKitReferenceDesign/.vs/ConnectedServices.json
+/AvnetStarterKitReferenceDesign/.vs
+/AvnetStarterKitReferenceDesign/out/ARM-Debug-3
+/AvnetStarterKitReferenceDesign/out/ARM-Release-3
