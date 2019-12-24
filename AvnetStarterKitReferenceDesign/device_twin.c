@@ -26,6 +26,7 @@ bool userLedRedIsOn = false;
 bool userLedGreenIsOn = false;
 bool userLedBlueIsOn = false;
 bool wifiLedIsOn = false;
+bool appLedIsOn = false;
 bool clkBoardRelay1IsOn = true;
 bool clkBoardRelay2IsOn = true;
 
@@ -34,6 +35,7 @@ extern int userLedGreenFd;
 extern int userLedBlueFd;
 
 extern int wifiLedFd;
+extern int appLedFd;
 extern int clickSocket1Relay1Fd;
 extern int clickSocket1Relay2Fd;
 
@@ -64,7 +66,8 @@ twin_t twinArray[] = {
 	{.twinKey = "userLedGreen",.twinVar = &userLedGreenIsOn,.twinFd = &userLedGreenFd,.twinGPIO = AVNET_MT3620_SK_USER_LED_GREEN,.twinType = TYPE_BOOL,.active_high = false},
 	{.twinKey = "userLedBlue",.twinVar = &userLedBlueIsOn,.twinFd = &userLedBlueFd,.twinGPIO = AVNET_MT3620_SK_USER_LED_BLUE,.twinType = TYPE_BOOL,.active_high = false},
 	{.twinKey = "wifiLed",.twinVar = &wifiLedIsOn,.twinFd = &wifiLedFd,.twinGPIO = AVNET_MT3620_SK_WLAN_STATUS_LED_YELLOW,.twinType = TYPE_BOOL,.active_high = false},
-	{.twinKey = "clickBoardRelay1",.twinVar = &clkBoardRelay1IsOn,.twinFd = &clickSocket1Relay1Fd,.twinGPIO = AVNET_MT3620_SK_GPIO34,.twinType = TYPE_BOOL,.active_high = true},
+    {.twinKey = "appLed",.twinVar = &appLedIsOn,.twinFd = &appLedFd,.twinGPIO = AVNET_MT3620_SK_APP_STATUS_LED_YELLOW,.twinType = TYPE_BOOL,.active_high = false},
+    {.twinKey = "clickBoardRelay1",.twinVar = &clkBoardRelay1IsOn,.twinFd = &clickSocket1Relay1Fd,.twinGPIO = AVNET_MT3620_SK_GPIO34,.twinType = TYPE_BOOL,.active_high = true},
 	{.twinKey = "clickBoardRelay2",.twinVar = &clkBoardRelay2IsOn,.twinFd = &clickSocket1Relay2Fd,.twinGPIO = AVNET_MT3620_SK_GPIO0,.twinType = TYPE_BOOL,.active_high = true} };
 
 // Calculate how many twin_t items are in the array.  We use this to iterate through the structure.

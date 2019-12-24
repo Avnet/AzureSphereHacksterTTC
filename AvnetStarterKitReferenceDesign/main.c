@@ -82,6 +82,7 @@ int userLedRedFd = -1;
 int userLedGreenFd = -1;
 int userLedBlueFd = -1;
 int wifiLedFd = -1;
+int appLedFd = -1;
 int clickSocket1Relay1Fd = -1;
 int clickSocket1Relay2Fd = -1;
 
