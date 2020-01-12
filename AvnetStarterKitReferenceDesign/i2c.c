@@ -64,7 +64,7 @@ static float pressure_hPa;
 static float lps22hhTemperature_degC;
 
 static uint8_t whoamI, rst;
-static int accelTimerFd = -1;
+int accelTimerFd;
 const uint8_t lsm6dsOAddress = LSM6DSO_ADDRESS;     // Addr = 0x6A
 lsm6dso_ctx_t dev_ctx;
 lps22hh_ctx_t pressure_ctx;
@@ -260,29 +260,29 @@ int initI2c(void) {
 	else {
 		Log_Debug("LSM6DSO Found!\n");
 	}
-		
-	 // Restore default configuration
+
+	// Restore default configuration
 	lsm6dso_reset_set(&dev_ctx, PROPERTY_ENABLE);
 	do {
 		lsm6dso_reset_get(&dev_ctx, &rst);
 	} while (rst);
 
-	 // Disable I3C interface
+	// Disable I3C interface
 	lsm6dso_i3c_disable_set(&dev_ctx, LSM6DSO_I3C_DISABLE);
 
 	// Enable Block Data Update
 	lsm6dso_block_data_update_set(&dev_ctx, PROPERTY_ENABLE);
 
-	 // Set Output Data Rate
+	// Set Output Data Rate
 	lsm6dso_xl_data_rate_set(&dev_ctx, LSM6DSO_XL_ODR_12Hz5);
 	lsm6dso_gy_data_rate_set(&dev_ctx, LSM6DSO_GY_ODR_12Hz5);
 
-	 // Set full scale
+	// Set full scale
 	lsm6dso_xl_full_scale_set(&dev_ctx, LSM6DSO_4g);
 	lsm6dso_gy_full_scale_set(&dev_ctx, LSM6DSO_2000dps);
 
-	 // Configure filtering chain(No aux interface)
-	// Accelerometer - LPF1 + LPF2 path	
+	// Configure filtering chain(No aux interface)
+   // Accelerometer - LPF1 + LPF2 path	
 	lsm6dso_xl_hp_path_on_out_set(&dev_ctx, LSM6DSO_LP_ODR_DIV_100);
 	lsm6dso_xl_filter_lp2_set(&dev_ctx, PROPERTY_ENABLE);
 
@@ -300,7 +300,7 @@ int initI2c(void) {
 	int failCount = 10;
 
 	while (!lps22hhDetected) {
-		
+
 		// Enable pull up on master I2C interface.
 		lsm6dso_sh_pin_mode_set(&dev_ctx, LSM6DSO_INTERNAL_PULL_UP);
 
@@ -344,19 +344,12 @@ int initI2c(void) {
 
 	uint8_t reg;
 
-
-	Log_Debug("LSM6DSO: Calibrating angular rate . . .\n"); 
+	Log_Debug("LSM6DSO: Calibrating angular rate . . .\n");
 	Log_Debug("LSM6DSO: Please make sure the device is stationary.\n");
 
 	do {
-
-		// Delay and read the device until we have data!
-		do {
-			// Read the calibration values
-			HAL_Delay(5000);
-			lsm6dso_gy_flag_data_ready_get(&dev_ctx, &reg);
-		} while (!reg);
-
+		// Read the calibration values
+		lsm6dso_gy_flag_data_ready_get(&dev_ctx, &reg);
 		if (reg)
 		{
 			// Read angular rate field data to use for calibration offsets
@@ -364,17 +357,11 @@ int initI2c(void) {
 			lsm6dso_angular_rate_raw_get(&dev_ctx, raw_angular_rate_calibration.u8bit);
 		}
 
-		// Delay and read the device until we have data!
-		do {
-			// Read the calibration values
-			HAL_Delay(5000);
-			lsm6dso_gy_flag_data_ready_get(&dev_ctx, &reg);
-		} while (!reg);
-
 		// Read the angular data rate again and verify that after applying the calibration, we have 0 angular rate in all directions
+
+		lsm6dso_gy_flag_data_ready_get(&dev_ctx, &reg);
 		if (reg)
 		{
-
 			// Read angular rate field data
 			memset(data_raw_angular_rate.u8bit, 0x00, 3 * sizeof(int16_t));
 			lsm6dso_angular_rate_raw_get(&dev_ctx, data_raw_angular_rate.u8bit);
@@ -383,11 +370,10 @@ int initI2c(void) {
 			angular_rate_dps[0] = lsm6dso_from_fs2000_to_mdps(data_raw_angular_rate.i16bit[0] - raw_angular_rate_calibration.i16bit[0]);
 			angular_rate_dps[1] = lsm6dso_from_fs2000_to_mdps(data_raw_angular_rate.i16bit[1] - raw_angular_rate_calibration.i16bit[1]);
 			angular_rate_dps[2] = lsm6dso_from_fs2000_to_mdps(data_raw_angular_rate.i16bit[2] - raw_angular_rate_calibration.i16bit[2]);
-
 		}
 
-		// If the angular values after applying the offset are not all 0.0s, then do it again!
-	} while ((angular_rate_dps[0] != 0.0) || (angular_rate_dps[1] != 0.0) || (angular_rate_dps[2] != 0.0));
+		// If the angular values after applying the offset are not zero, then do it again!
+	} while (angular_rate_dps[0] == angular_rate_dps[1] == angular_rate_dps[2] == 0.0);
 
 	Log_Debug("LSM6DSO: Calibrating angular rate complete!\n");
 
@@ -398,6 +384,7 @@ int initI2c(void) {
 	struct timespec accelReadPeriod = { .tv_sec = ACCEL_READ_PERIOD_SECONDS,.tv_nsec = ACCEL_READ_PERIOD_NANO_SECONDS };
 	// event handler data structures. Only the event handler field needs to be populated.
 	static EventData accelEventData = { .eventHandler = &AccelTimerEventHandler };
+	accelTimerFd = -1;
 	accelTimerFd = CreateTimerFdAndAddToEpoll(epollFd, &accelReadPeriod, &accelEventData, EPOLLIN);
 	if (accelTimerFd < 0) {
 		return -1;
