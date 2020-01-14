@@ -2,7 +2,9 @@
   "environments": [
     {
       "environment": "AzureSphere",
-      "AzureSphereTargetApiSet": "3",
+      "AzureSphereTargetApiSet": "3+Beta1909",
+      "AzureSphereTargetApplicationRuntimeVersion": 3,
+      "AzureSphereTargetBetaApis": "Beta1909",
       "AzureSphereTargetHardwareDefinitionDirectory": "${projectDir}\\Hardware\\avnet_mt3620_sk",
       "AzureSphereTargetHardwareDefinition": "avnet_mt3620_sk.json"
     }
@@ -12,11 +14,11 @@
       "name": "ARM-Debug",
       "generator": "Ninja",
       "configurationType": "Debug",
-      "inheritEnvironments": [ 
+      "inheritEnvironments": [
         "AzureSphere"
       ],
-      "buildRoot": "${projectDir}\\out\\${name}-${env.AzureSphereTargetApiSet}",
-      "installRoot": "${projectDir}\\install\\${name}-${env.AzureSphereTargetApiSet}",
+      "buildRoot": "${workspaceRoot}\\out\\${name}-${env.AzureSphereTargetApplicationRuntimeVersion}${env.AzureSphereTargetBetaApis}",
+      "installRoot": "${workspaceRoot}\\install\\${name}-${env.AzureSphereTargetApplicationRuntimeVersion}${env.AzureSphereTargetBetaApis}",
       "cmakeCommandArgs": "--no-warn-unused-cli",
       "buildCommandArgs": "-v",
       "ctestCommandArgs": "",

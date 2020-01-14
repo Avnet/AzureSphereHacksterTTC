@@ -62,6 +62,11 @@
 #include <applibs/wificonfig.h>
 #include <azureiot/iothub_device_client_ll.h>
 
+//// ADC connection
+#include <sys/time.h>
+#include <sys/socket.h>
+#include <applibs/application.h>
+
 // Provide local access to variables in other files
 extern twin_t twinArray[];
 extern int twinArraySize;
@@ -86,6 +91,24 @@ int wifiLedFd = -1;
 int clickSocket1Relay1Fd = -1;
 int clickSocket1Relay2Fd = -1;
 
+//// ADC connection
+static const char rtAppComponentId[] = "005180bc-402f-4cb3-a662-72937dbcde47";
+static int sockFd = -1;
+static void SendMessageToRTCore(void);
+static void TimerEventHandler(EventData* eventData);
+static void SocketEventHandler(EventData* eventData);
+static int timerFd = -1;
+uint8_t RTCore_status;
+
+// event handler data structures. Only the event handler field needs to be populated.
+static EventData timerEventData = { .eventHandler = &TimerEventHandler };
+static EventData socketEventData = { .eventHandler = &SocketEventHandler };
+
+// Data of light sensor
+float light_sensor;
+//// end ADC connection
+
+
 // Azure IoT Hub/Central defines.
 #define SCOPEID_LENGTH 20
 char scopeId[SCOPEID_LENGTH]; // ScopeId for the Azure IoT Central application and DPS set in
@@ -104,6 +127,85 @@ static const char cstrButtonTelemetryJson[] = "{\"%s\":\"%d\"}";
 
 // Termination state
 volatile sig_atomic_t terminationRequired = false;
+
+//// ADC connection
+
+/// <summary>
+///     Handle socket event by reading incoming data from real-time capable application.
+/// </summary>
+static void SocketEventHandler(EventData* eventData)
+{
+	// Read response from real-time capable application.
+	char rxBuf[32];
+	union Analog_data
+	{
+		uint32_t u32;
+		uint8_t u8[4];
+	} analog_data;
+
+	int bytesReceived = recv(sockFd, rxBuf, sizeof(rxBuf), 0);
+
+	if (bytesReceived == -1) {
+		Log_Debug("ERROR: Unable to receive message: %d (%s)\n", errno, strerror(errno));
+		terminationRequired = true;
+	}
+
+	// Copy data from Rx buffer to analog_data union
+	for (int i = 0; i < sizeof(analog_data); i++)
+	{
+		analog_data.u8[i] = rxBuf[i];
+	}
+
+	// get voltage (2.5*adc_reading/4096)
+	// divide by 3650 (3.65 kohm) to get current (A)
+	// multiply by 1000000 to get uA
+	// divide by 0.1428 to get Lux (based on fluorescent light Fig. 1 datasheet)
+	// divide by 0.5 to get Lux (based on incandescent light Fig. 1 datasheet)
+	// We can simplify the factors, but for demostration purpose it's OK
+	light_sensor = ((float)analog_data.u32 * 2.5 / 4095) * 1000000 / (3650 * 0.1428);
+
+	Log_Debug("Received %d bytes from RT Application.\n", bytesReceived);
+	Log_Debug("ALS-PT19: LightSensor [Lux]: %0.2f\n", light_sensor);
+
+}
+
+/// <summary>
+///     Handle send timer event by writing data to the real-time capable application.
+/// </summary>
+static void TimerEventHandler(EventData* eventData)
+{
+	if (ConsumeTimerFdEvent(timerFd) != 0) {
+		terminationRequired = true;
+		return;
+	}
+
+	SendMessageToRTCore();
+}
+
+/// <summary>
+///     Helper function for TimerEventHandler sends message to real-time capable application.
+/// </summary>
+static void SendMessageToRTCore(void)
+{
+	static int iter = 0;
+
+	// Send "Read-ADC-%d" message to real-time capable application.
+	static char txMessage[32];
+	sprintf(txMessage, "Read-ADC-%d", iter++);
+	Log_Debug("Sending: %s\n", txMessage);
+
+	int bytesSent = send(sockFd, txMessage, strlen(txMessage), 0);
+	if (bytesSent == -1)
+	{
+		Log_Debug("ERROR: Unable to send message: %d (%s)\n", errno, strerror(errno));
+		terminationRequired = true;
+		return;
+	}
+}
+
+//// end ADC connection
+
+
 
 /// <summary>
 ///     Signal handler for termination requests. This handler must be async-signal-safe.
@@ -402,6 +504,50 @@ static int InitPeripheralsAndHandlers(void)
     if (epollFd < 0) {
         return -1;
     }
+
+	//// ADC connection
+
+	// Open connection to real-time capable application.
+	sockFd = Application_Socket(rtAppComponentId);
+	if (sockFd == -1)
+	{
+		Log_Debug("ERROR: Unable to create socket: %d (%s)\n", errno, strerror(errno));
+		Log_Debug("Real Time Core disabled or Component Id is not correct.\n");
+		Log_Debug("The program will continue without showing light sensor data.\n");
+		// Communication with RT core error
+		RTCore_status = 1;
+	}
+	else
+	{
+		// Communication with RT core success
+		RTCore_status = 0;
+		// Set timeout, to handle case where real-time capable application does not respond.
+		static const struct timeval recvTimeout = { .tv_sec = 5,.tv_usec = 0 };
+		int result = setsockopt(sockFd, SOL_SOCKET, SO_RCVTIMEO, &recvTimeout, sizeof(recvTimeout));
+		if (result == -1)
+		{
+			Log_Debug("ERROR: Unable to set socket timeout: %d (%s)\n", errno, strerror(errno));
+			return -1;
+		}
+
+		// Register handler for incoming messages from real-time capable application.
+		if (RegisterEventHandlerToEpoll(epollFd, sockFd, &socketEventData, EPOLLIN) != 0)
+		{
+			return -1;
+		}
+
+		// Register one second timer to send a message to the real-time core.
+		static const struct timespec sendPeriod = { .tv_sec = 1,.tv_nsec = 0 };
+		timerFd = CreateTimerFdAndAddToEpoll(epollFd, &sendPeriod, &timerEventData, EPOLLIN);
+		if (timerFd < 0)
+		{
+			return -1;
+		}
+		RegisterEventHandlerToEpoll(epollFd, timerFd, &timerEventData, EPOLLIN);
+	}
+
+	//// end ADC Connection
+
 
 	if (initI2c() == -1) {
 		return -1;
