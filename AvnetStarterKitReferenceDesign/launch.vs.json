@@ -13,8 +13,8 @@
       "workingDirectory": "${workspaceRoot}",
       "applicationPath": "${debugInfo.target}",
       "imagePath": "${debugInfo.targetImage}",
-      "targetCore": "HLCore",
       "targetApiSet": "${env.AzureSphereTargetApiSet}",
+      "targetCore": "HLCore",
       "partnerComponents": [ "005180bc-402f-4cb3-a662-72937dbcde47" ]
     }
   ]
