@@ -1,7 +1,7 @@
 ﻿/* Copyright (c) Microsoft Corporation. All rights reserved.
    Licensed under the MIT License. */
 
-   /************************************************************************************************
+   /*************************************************************************************************
    Name: AvnetStarterKitReferenceDesign
    Sphere OS: 19.02
    This file contains the 'main' function. Program execution begins and ends there
