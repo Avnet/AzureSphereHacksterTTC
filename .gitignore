@@ -57,6 +57,7 @@ dkms.conf
 /AvnetStarterKitReferenceDesign/.vs
 /AvnetStarterKitReferenceDesign/out/ARM-Debug-3
 /AvnetStarterKitReferenceDesign/out/ARM-Release-3
-/out/ARM-Debug-3Beta1909
-/IntercoreCommsADC_RTApp_MT3620_BMetal/.vs
 /AvnetStarterKitReferenceDesign/out/ARM-Debug-3+Beta1909
+/AvnetStarterKitReferenceDesign/out/ARM-Debug-3Beta1909/.cmake/api/v1
+/AvnetStarterKitReferenceDesign/out/ARM-Debug-3Beta1909/CMakeFiles
+/AvnetStarterKitReferenceDesign/out/ARM-Debug-3Beta1909
