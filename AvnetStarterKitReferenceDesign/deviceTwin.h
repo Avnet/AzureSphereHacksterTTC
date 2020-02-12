@@ -3,7 +3,8 @@
 #include <applibs/gpio.h>
 #include "parson.h"
 
-#define JSON_BUFFER_SIZE 128
+#define JSON_BUFFER_SIZE 204
+#define CLOUD_MSG_SIZE 22
 
 typedef enum {
 	TYPE_INT = 0,

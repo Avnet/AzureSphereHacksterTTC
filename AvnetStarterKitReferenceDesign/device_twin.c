@@ -25,14 +25,21 @@
 bool userLedRedIsOn = false;
 bool userLedGreenIsOn = false;
 bool userLedBlueIsOn = false;
+bool appLedIsOn = false;
 bool wifiLedIsOn = false;
 bool clkBoardRelay1IsOn = true;
 bool clkBoardRelay2IsOn = true;
+
+uint8_t oled_ms1[CLOUD_MSG_SIZE] = "    Azure Sphere";
+uint8_t oled_ms2[CLOUD_MSG_SIZE];
+uint8_t oled_ms3[CLOUD_MSG_SIZE] = "    Avnet MT3620";
+uint8_t oled_ms4[CLOUD_MSG_SIZE] = "    Starter Kit";
 
 extern int userLedRedFd;
 extern int userLedGreenFd;
 extern int userLedBlueFd;
 
+extern int appLedFd;
 extern int wifiLedFd;
 extern int clickSocket1Relay1Fd;
 extern int clickSocket1Relay2Fd;
@@ -47,7 +54,7 @@ static const char cstrDeviceTwinJsonString[] = "{\"%s\": \"%s\"}";
 static const char cstrDeviceTwinJsonFloatIOTC[] = "{\"%s\": {\"value\": %.2f, \"status\" : \"completed\" , \"desiredVersion\" : %d }}";
 static const char cstrDeviceTwinJsonBoolIOTC[] = "{\"%s\": {\"value\": %s, \"status\" : \"completed\" , \"desiredVersion\" : %d }}";
 static const char cstrDeviceTwinJsonIntegerIOTC[] = "{\"%s\": {\"value\": %d, \"status\" : \"completed\" , \"desiredVersion\" : %d }}";
-static const char cstrDeviceTwinJsonStringIOTC[] = "{\"%s\": {\"value\": %s, \"status\" : \"completed\" , \"desiredVersion\" : %d }}";
+static const char cstrDeviceTwinJsonStringIOTC[]  = "{\"%s\": {\"value\": \"%s\", \"status\" : \"completed\" , \"desiredVersion\" : %d }}";
 #endif 
 
 static int desiredVersion = 0;
@@ -60,12 +67,17 @@ static int desiredVersion = 0;
 // .twinType - The data type for this item, TYPE_BOOL, TYPE_STRING, TYPE_INT, or TYPE_FLOAT
 // .active_high - true if GPIO item is active high, false if active low.  This is used to init the GPIO 
 twin_t twinArray[] = {
-    {.twinKey = "userLedRed",.twinVar = &userLedRedIsOn,.twinFd = &userLedRedFd,.twinGPIO = AVNET_MT3620_SK_USER_LED_RED,.twinType = TYPE_BOOL,.active_high = false},
+		{.twinKey = "userLedRed",.twinVar = &userLedRedIsOn,.twinFd = &userLedRedFd,.twinGPIO = AVNET_MT3620_SK_USER_LED_RED,.twinType = TYPE_BOOL,.active_high = false},
 	{.twinKey = "userLedGreen",.twinVar = &userLedGreenIsOn,.twinFd = &userLedGreenFd,.twinGPIO = AVNET_MT3620_SK_USER_LED_GREEN,.twinType = TYPE_BOOL,.active_high = false},
 	{.twinKey = "userLedBlue",.twinVar = &userLedBlueIsOn,.twinFd = &userLedBlueFd,.twinGPIO = AVNET_MT3620_SK_USER_LED_BLUE,.twinType = TYPE_BOOL,.active_high = false},
 	{.twinKey = "wifiLed",.twinVar = &wifiLedIsOn,.twinFd = &wifiLedFd,.twinGPIO = AVNET_MT3620_SK_WLAN_STATUS_LED_YELLOW,.twinType = TYPE_BOOL,.active_high = false},
 	{.twinKey = "clickBoardRelay1",.twinVar = &clkBoardRelay1IsOn,.twinFd = &clickSocket1Relay1Fd,.twinGPIO = AVNET_MT3620_SK_GPIO34,.twinType = TYPE_BOOL,.active_high = true},
-	{.twinKey = "clickBoardRelay2",.twinVar = &clkBoardRelay2IsOn,.twinFd = &clickSocket1Relay2Fd,.twinGPIO = AVNET_MT3620_SK_GPIO0,.twinType = TYPE_BOOL,.active_high = true} };
+	{.twinKey = "clickBoardRelay2",.twinVar = &clkBoardRelay2IsOn,.twinFd = &clickSocket1Relay2Fd,.twinGPIO = AVNET_MT3620_SK_GPIO0,.twinType = TYPE_BOOL,.active_high = true},
+	{.twinKey = "OledDisplayMsg1",.twinVar = oled_ms1,.twinFd = NULL,.twinGPIO = NO_GPIO_ASSOCIATED_WITH_TWIN,.twinType = TYPE_STRING,.active_high = true},
+	{.twinKey = "OledDisplayMsg2",.twinVar = oled_ms2,.twinFd = NULL,.twinGPIO = NO_GPIO_ASSOCIATED_WITH_TWIN,.twinType = TYPE_STRING,.active_high = true},
+	{.twinKey = "OledDisplayMsg3",.twinVar = oled_ms3,.twinFd = NULL,.twinGPIO = NO_GPIO_ASSOCIATED_WITH_TWIN,.twinType = TYPE_STRING,.active_high = true},
+	{.twinKey = "OledDisplayMsg4",.twinVar = oled_ms4,.twinFd = NULL,.twinGPIO = NO_GPIO_ASSOCIATED_WITH_TWIN,.twinType = TYPE_STRING,.active_high = true}
+};
 
 // Calculate how many twin_t items are in the array.  We use this to iterate through the structure.
 int twinArraySize = sizeof(twinArray) / sizeof(twin_t);
@@ -180,14 +192,18 @@ void deviceTwinChangedHandler(JSON_Object * desiredProperties)
 				Log_Debug("Received device update. New %s is %d\n", twinArray[i].twinKey, *(int*)twinArray[i].twinVar);
 				checkAndUpdateDeviceTwin(twinArray[i].twinKey, twinArray[i].twinVar, TYPE_INT, true);
 				break;
+
 			case TYPE_STRING:
-				Log_Debug("ERROR: TYPE_STRING case not implemented!");
+				Log_Debug(">>> STRING!");
+				strcpy((char*)twinArray[i].twinVar, json_object_get_string(currentJSONProperties, "value"));
+				Log_Debug("Received device update. New %s is %s\n", twinArray[i].twinKey, (char*)twinArray[i].twinVar);
+				checkAndUpdateDeviceTwin(twinArray[i].twinKey, twinArray[i].twinVar, TYPE_STRING, true);
 				break;
 			}
 		}
 	}
 #else // !IOT_CENTRAL_APPLICATION		
-	
+
 	for (int i = 0; i < (sizeof(twinArray) / sizeof(twin_t)); i++) {
 
 		if (json_object_has_value(desiredProperties, twinArray[i].twinKey) != 0)
@@ -216,8 +232,11 @@ void deviceTwinChangedHandler(JSON_Object * desiredProperties)
 				Log_Debug("Received device update. New %s is %d\n", twinArray[i].twinKey, *(int*)twinArray[i].twinVar);
 				checkAndUpdateDeviceTwin(twinArray[i].twinKey, twinArray[i].twinVar, TYPE_INT, true);
 				break;
+
 			case TYPE_STRING:
-				Log_Debug("ERROR: TYPE_STRING case not implemented!");
+				strcpy((char*)twinArray[i].twinVar, (char*)json_object_get_string(desiredProperties, twinArray[i].twinKey));
+				Log_Debug("Received device update. New %s is %s\n", twinArray[i].twinKey, (char*)twinArray[i].twinVar);
+				checkAndUpdateDeviceTwin(twinArray[i].twinKey, twinArray[i].twinVar, TYPE_STRING, true);
 				break;
 			}
 		}

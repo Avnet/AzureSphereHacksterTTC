@@ -50,6 +50,7 @@
 #include "i2c.h"
 #include "lsm6dso_reg.h"
 #include "lps22hh_reg.h"
+#include "oled.h"
 
 /* Private variables ---------------------------------------------------------*/
 static axis3bit16_t data_raw_acceleration;
@@ -69,6 +70,13 @@ const uint8_t lsm6dsOAddress = LSM6DSO_ADDRESS;     // Addr = 0x6A
 lsm6dso_ctx_t dev_ctx;
 lps22hh_ctx_t pressure_ctx;
 bool lps22hhDetected;
+
+float altitude;
+
+// Status variables
+uint8_t lsm6dso_status = 1;
+uint8_t lps22hh_status = 1;
+uint8_t RTCore_status = 1;
 
 //Extern variables
 int i2cFd = -1;
@@ -156,7 +164,7 @@ void AccelTimerEventHandler(EventData *eventData)
 		lsm6dso_temperature_raw_get(&dev_ctx, data_raw_temperature.u8bit);
 		lsm6dsoTemperature_degC = lsm6dso_from_lsb_to_celsius(data_raw_temperature.i16bit);
 
-		Log_Debug("LSM6DSO: Temperature  [degC]: %.2f\r\n", lsm6dsoTemperature_degC);
+		Log_Debug("LSM6DSO: Temperature1 [degC]: %.2f\r\n", lsm6dsoTemperature_degC);
 	}
 
 	// Read the lps22hh sensor on the lsm6dso device
@@ -180,15 +188,46 @@ void AccelTimerEventHandler(EventData *eventData)
 			lps22hhTemperature_degC = lps22hh_from_lsb_to_celsius(data_raw_temperature.i16bit);
 
 			Log_Debug("LPS22HH: Pressure     [hPa] : %.2f\r\n", pressure_hPa);
-			Log_Debug("LPS22HH: Temperature  [degC]: %.2f\r\n", lps22hhTemperature_degC);
+			Log_Debug("LPS22HH: Temperature2 [degC]: %.2f\r\n", lps22hhTemperature_degC);
 		}
 	}
 	// LPS22HH was not detected
 	else {
+
 		Log_Debug("LPS22HH: Pressure     [hPa] : Not read!\r\n");
 		Log_Debug("LPS22HH: Temperature  [degC]: Not read!\r\n");
 	}
 
+	// Fill in the sensor data structure
+	sensor_data.acceleration_mg[0] = acceleration_mg[0];
+	sensor_data.acceleration_mg[1] = acceleration_mg[1];
+	sensor_data.acceleration_mg[2] = acceleration_mg[2];
+	sensor_data.angular_rate_dps[0] = angular_rate_dps[0];
+	sensor_data.angular_rate_dps[1] = angular_rate_dps[1];
+	sensor_data.angular_rate_dps[2] = angular_rate_dps[2];
+	sensor_data.lsm6dsoTemperature_degC = lsm6dsoTemperature_degC;
+	sensor_data.lps22hhpressure_hPa = pressure_hPa;
+	sensor_data.lps22hhTemperature_degC = lps22hhTemperature_degC;
+
+// The ALTITUDE value calculated is actually "Pressure Altitude". This lacks correction for temperature (and humidity)
+// "pressure altitude" calculator located at: https://www.weather.gov/epz/wxcalc_pressurealtitude
+// "pressure altitude" formula is defined at: https://www.weather.gov/media/epz/wxcalc/pressureAltitude.pdf
+// altitude in feet = 145366.45 * (1 - (hPa / 1013.25) ^ 0.190284) feet
+// altitude in meters = 145366.45 * 0.3048 * (1 - (hPa / 1013.25) ^ 0.190284) meters
+//
+// weather.com formula
+//altitude = 44307.69396 * (1 - powf((atm / 1013.25), 0.190284));  // pressure altitude in meters
+// Bosch's formula
+	altitude = 44330 * (1 - powf((pressure_hPa / 1013.25), 1 / 5.255));  // pressure altitude in meters
+
+#ifdef M0_INTERCORE_COMMS
+	Log_Debug("ALSPT19: Ambient Light[Lux] : %.2f\r\n", light_sensor);
+#endif 
+
+#ifdef OLED_SD1306
+	//// OLED
+	update_oled();
+#endif 
 #if (defined(IOT_CENTRAL_APPLICATION) || defined(IOT_HUB_APPLICATION))
 
 		// We've seen that the first read of the Accelerometer data is garbage.  If this is the first pass
@@ -202,9 +241,8 @@ void AccelTimerEventHandler(EventData *eventData)
 				Log_Debug("ERROR: not enough memory to send telemetry");
 			}
 
-			// construct the telemetry message
-			snprintf(pjsonBuffer, JSON_BUFFER_SIZE, "{\"gX\":\"%.4lf\", \"gY\":\"%.4lf\", \"gZ\":\"%.4lf\", \"aX\": \"%4.2f\", \"aY\": \"%4.2f\", \"aZ\": \"%4.2f\"}",
-				acceleration_mg[0], acceleration_mg[1], acceleration_mg[2], angular_rate_dps[0], angular_rate_dps[1], angular_rate_dps[2]);
+			snprintf(pjsonBuffer, JSON_BUFFER_SIZE, "{\"gX\":\"%.2lf\", \"gY\":\"%.2lf\", \"gZ\":\"%.2lf\", \"aX\": \"%.2f\", \"aY\": \"%.2f\", \"aZ\": \"%.2f\", \"pressure\": \"%.2f\", \"light_intensity\": \"%.2f\", \"altitude\": \"%.2f\", \"temp\": \"%.2f\",  \"rssi\": \"%d\"}",
+				angular_rate_dps[0], angular_rate_dps[1], angular_rate_dps[2], acceleration_mg[0], acceleration_mg[1], acceleration_mg[2], pressure_hPa, light_sensor, altitude, lsm6dsoTemperature_degC, network_data.rssi);
 
 			Log_Debug("\n[Info] Sending telemetry: %s\n", pjsonBuffer);
 			AzureIoT_SendMessage(pjsonBuffer);
@@ -244,6 +282,22 @@ int initI2c(void) {
 		return -1;
 	}
 
+#ifdef OLED_SD1306
+	// Start OLED
+	if (oled_init())
+	{
+		Log_Debug("OLED not found!\n");
+	}
+	else
+	{
+		Log_Debug("OLED found!\n");
+	}
+
+	// Draw AVNET logo
+	//oled_draw_logo();
+	oled_i2c_bus_status(CLEAR_BUFFER);
+#endif
+
 	// Start lsm6dso specific init
 
 	// Initialize lsm6dso mems driver interface
@@ -252,37 +306,51 @@ int initI2c(void) {
 	dev_ctx.handle = &i2cFd;
 
 	// Check device ID
+	HAL_Delay(5000); //pf
+
+	// Check device ID
 	lsm6dso_device_id_get(&dev_ctx, &whoamI);
 	if (whoamI != LSM6DSO_ID) {
 		Log_Debug("LSM6DSO not found!\n");
+#ifdef OLED_SD1306
+		// OLED update
+		lsm6dso_status = 1;
+		oled_i2c_bus_status(LSM6DSO_STATUS);
+#endif
 		return -1;
 	}
 	else {
 		Log_Debug("LSM6DSO Found!\n");
-	}
 
-	// Restore default configuration
+#ifdef OLED_SD1306
+		// OLED update
+		lsm6dso_status = 0;
+		oled_i2c_bus_status(LSM6DSO_STATUS);
+#endif
+	}
+		
+	 // Restore default configuration
 	lsm6dso_reset_set(&dev_ctx, PROPERTY_ENABLE);
 	do {
 		lsm6dso_reset_get(&dev_ctx, &rst);
 	} while (rst);
 
-	// Disable I3C interface
+	 // Disable I3C interface
 	lsm6dso_i3c_disable_set(&dev_ctx, LSM6DSO_I3C_DISABLE);
 
 	// Enable Block Data Update
 	lsm6dso_block_data_update_set(&dev_ctx, PROPERTY_ENABLE);
 
-	// Set Output Data Rate
+	 // Set Output Data Rate
 	lsm6dso_xl_data_rate_set(&dev_ctx, LSM6DSO_XL_ODR_12Hz5);
 	lsm6dso_gy_data_rate_set(&dev_ctx, LSM6DSO_GY_ODR_12Hz5);
 
-	// Set full scale
+	 // Set full scale
 	lsm6dso_xl_full_scale_set(&dev_ctx, LSM6DSO_4g);
 	lsm6dso_gy_full_scale_set(&dev_ctx, LSM6DSO_2000dps);
 
-	// Configure filtering chain(No aux interface)
-   // Accelerometer - LPF1 + LPF2 path	
+	 // Configure filtering chain(No aux interface)
+	// Accelerometer - LPF1 + LPF2 path	
 	lsm6dso_xl_hp_path_on_out_set(&dev_ctx, LSM6DSO_LP_ODR_DIV_100);
 	lsm6dso_xl_filter_lp2_set(&dev_ctx, PROPERTY_ENABLE);
 
@@ -300,7 +368,7 @@ int initI2c(void) {
 	int failCount = 10;
 
 	while (!lps22hhDetected) {
-
+		
 		// Enable pull up on master I2C interface.
 		lsm6dso_sh_pin_mode_set(&dev_ctx, LSM6DSO_INTERNAL_PULL_UP);
 
@@ -308,10 +376,21 @@ int initI2c(void) {
 		lps22hh_device_id_get(&pressure_ctx, &whoamI);
 		if (whoamI != LPS22HH_ID) {
 			Log_Debug("LPS22HH not found!\n");
+
+#ifdef OLED_SD1306
+			// OLED update
+			lps22hh_status = 1;
+			oled_i2c_bus_status(LPS22HH_STATUS);
+#endif 
 		}
 		else {
 			lps22hhDetected = true;
 			Log_Debug("LPS22HH Found!\n");
+#ifdef OLED_SD1306
+			// OLED update
+			lps22hh_status = 0;
+			oled_i2c_bus_status(LPS22HH_STATUS);
+#endif 
 		}
 
 		// Restore the default configuration
@@ -332,7 +411,6 @@ int initI2c(void) {
 		}
 
 		if (failCount-- == 0) {
-			bool lps22hhDetected = false;
 			Log_Debug("Failed to read LPS22HH device ID, disabling all access to LPS22HH device!\n");
 			Log_Debug("Usually a power cycle will correct this issue\n");
 			break;
@@ -343,8 +421,8 @@ int initI2c(void) {
 	// is stationary.
 
 	uint8_t reg;
-
-	Log_Debug("LSM6DSO: Calibrating angular rate . . .\n");
+	
+	Log_Debug("LSM6DSO: Calibrating angular rate . . .\n"); 
 	Log_Debug("LSM6DSO: Please make sure the device is stationary.\n");
 
 	do {
@@ -389,7 +467,7 @@ int initI2c(void) {
 	if (accelTimerFd < 0) {
 		return -1;
 	}
-
+	
 	return 0;
 }
 
@@ -586,7 +664,7 @@ static int32_t lsm6dso_read_lps22hh_cx(void* ctx, uint8_t reg, uint8_t* data, ui
 	// This data will be read from the device connected to the 
 	// sensor hub, and saved into a register for us to read.
 	ret = lsm6dso_sh_slv0_cfg_read(&dev_ctx, &sh_cfg_read);
-		
+
 	// Using slave 0 only
 	lsm6dso_sh_slave_connected_set(&dev_ctx, LSM6DSO_SLV_0);
 
