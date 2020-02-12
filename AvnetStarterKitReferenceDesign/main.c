@@ -102,6 +102,11 @@ int wifiLedFd = -1;
 int clickSocket1Relay1Fd = -1;
 int clickSocket1Relay2Fd = -1;
 
+// Azure IoT Hub/Central defines.
+#define SCOPEID_LENGTH 20
+char scopeId[SCOPEID_LENGTH]; // ScopeId for the Azure IoT Central application and DPS set in
+						      // app_manifest.json, CmdArgs
+
 #ifdef M0_INTERCORE_COMMS
 //// ADC connection
 static const char rtAppComponentId[] = "005180bc-402f-4cb3-a662-72937dbcde47";
@@ -722,7 +727,7 @@ int main(int argc, char *argv[])
 #if (defined(IOT_CENTRAL_APPLICATION) || defined(IOT_HUB_APPLICATION))
 				// Note that we send up this data to Azure if it changes, but the IoT Central Properties elements only 
 				// show the data that was currenet when the device first connected to Azure.
-				checkAndUpdateDeviceTwin("ssid", &ssid, TYPE_STRING, true);
+				checkAndUpdateDeviceTwin("ssid", &ssid, TYPE_STRING, false);
 				checkAndUpdateDeviceTwin("freq", &frequency, TYPE_INT, false);
 				checkAndUpdateDeviceTwin("bssid", &bssid, TYPE_STRING, false);
 #endif 

@@ -315,7 +315,7 @@ int initI2c(void) {
 #ifdef OLED_SD1306
 		// OLED update
 		lsm6dso_status = 1;
-		oled_i2c_bus_status(LSM6DSO_STATUS);
+		oled_i2c_bus_status(LSM6DSO_STATUS_DISPLAY);
 #endif
 		return -1;
 	}
@@ -325,7 +325,7 @@ int initI2c(void) {
 #ifdef OLED_SD1306
 		// OLED update
 		lsm6dso_status = 0;
-		oled_i2c_bus_status(LSM6DSO_STATUS);
+		oled_i2c_bus_status(LSM6DSO_STATUS_DISPLAY);
 #endif
 	}
 		
