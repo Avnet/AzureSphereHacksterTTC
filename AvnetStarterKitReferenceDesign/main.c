@@ -30,9 +30,7 @@
    12. Control user RGB LEDs from the cloud using device twin properties
    13. Control optional Relay Click relays from the cloud using device twin properties
    14. Send Application version up as a device twin property
-   TODO
-   1. Add support for a OLED display
-   2. Add supprt for on-board light sensor
+
    	 
    *************************************************************************************************/
 

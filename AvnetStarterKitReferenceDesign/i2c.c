@@ -449,9 +449,9 @@ int initI2c(void) {
 			angular_rate_dps[1] = lsm6dso_from_fs2000_to_mdps(data_raw_angular_rate.i16bit[1] - raw_angular_rate_calibration.i16bit[1]);
 			angular_rate_dps[2] = lsm6dso_from_fs2000_to_mdps(data_raw_angular_rate.i16bit[2] - raw_angular_rate_calibration.i16bit[2]);
 		}
-
+		
 		// If the angular values after applying the offset are not 0.7 or less, then do it again!
-	} while ((angular_rate_dps[0] <= 0.7) && (angular_rate_dps[1] <= 0.7) && (angular_rate_dps[2] <= 0.7));
+	} while ((angular_rate_dps[0] >= 0.7f) && (angular_rate_dps[1] >= 0.7f) && (angular_rate_dps[2] >= 0.7f));
 
 	Log_Debug("LSM6DSO: Calibrating angular rate complete!\n");
 
