@@ -3,7 +3,7 @@
 
    /************************************************************************************************
    Name: AvnetStarterKitReferenceDesign
-   Sphere OS: 19.02
+   Sphere OS: 20.01
    This file contains the 'main' function. Program execution begins and ends there
 
    Authors:
@@ -14,7 +14,7 @@
    Using the Avnet Azure Sphere Starter Kit demonstrate the following features
 
    1. Read X,Y,Z accelerometer data from the onboard LSM6DSO device using the I2C Interface
-   2. Read X,YZ Angular rate data from the onboard LSM6DSO device using the I2C Interface
+   2. Read X,Y,Z Angular rate data from the onboard LSM6DSO device using the I2C Interface
    3. Read the barometric pressure from the onboard LPS22HH device using the I2C Interface
    4. Read the temperature from the onboard LPS22HH device using the I2C Interface
    5. Read the state of the A and B buttons
@@ -62,11 +62,25 @@
 #include <applibs/wificonfig.h>
 #include <azureiot/iothub_device_client_ll.h>
 
+#include "oled.h"
+
+#ifdef M0_INTERCORE_COMMS
+//// ADC connection
+#include <sys/time.h>
+#include <sys/socket.h>
+#include <applibs/application.h>
+#endif 
+
 // Provide local access to variables in other files
 extern twin_t twinArray[];
 extern int twinArraySize;
 extern IOTHUB_DEVICE_CLIENT_LL_HANDLE iothubClientHandle;
-extern int accelTimerFd;
+
+#ifdef OLED_SD1306
+extern sensor_var sensor_data;
+extern network_var network_data;
+extern float light_sensor;
+#endif 
 
 // Support functions.
 static void TerminationHandler(int signalNumber);
@@ -75,6 +89,7 @@ static void ClosePeripheralsAndHandlers(void);
 
 // File descriptors - initialized to invalid value
 int epollFd = -1;
+extern int accelTimerFd;
 static int buttonPollTimerFd = -1;
 static int buttonAGpioFd = -1;
 static int buttonBGpioFd = -1;
@@ -82,6 +97,7 @@ static int buttonBGpioFd = -1;
 int userLedRedFd = -1;
 int userLedGreenFd = -1;
 int userLedBlueFd = -1;
+int appLedFd = -1;
 int wifiLedFd = -1;
 int clickSocket1Relay1Fd = -1;
 int clickSocket1Relay2Fd = -1;
@@ -89,7 +105,22 @@ int clickSocket1Relay2Fd = -1;
 // Azure IoT Hub/Central defines.
 #define SCOPEID_LENGTH 20
 char scopeId[SCOPEID_LENGTH]; // ScopeId for the Azure IoT Central application and DPS set in
-									 // app_manifest.json, CmdArgs
+						      // app_manifest.json, CmdArgs
+
+#ifdef M0_INTERCORE_COMMS
+//// ADC connection
+static const char rtAppComponentId[] = "005180bc-402f-4cb3-a662-72937dbcde47";
+static int sockFd = -1;
+static void SendMessageToRTCore(void);
+static void TimerEventHandler(EventData *eventData);
+static void SocketEventHandler(EventData *eventData);
+static int timerFd = -1;
+uint8_t RTCore_status;
+
+// event handler data structures. Only the event handler field needs to be populated.
+static EventData timerEventData = { .eventHandler = &TimerEventHandler };
+static EventData socketEventData = { .eventHandler = &SocketEventHandler };
+#endif 
 
 // Button state variables, initilize them to button not-pressed (High)
 static GPIO_Value_Type buttonAState = GPIO_Value_High;
@@ -346,6 +377,16 @@ static void ButtonTimerEventHandler(EventData *eventData)
 			// Send Telemetry here
 			Log_Debug("Button B pressed!\n");
 			sendTelemetryButtonB = true;
+
+#ifdef OLED_SD1306
+			//// OLED
+			oled_state++;
+
+			if (oled_state > OLED_NUM_SCREEN)
+			{
+				oled_state = 0;
+			}
+#endif 
 		}
 		else {
 			Log_Debug("Button B released!\n");
@@ -354,9 +395,10 @@ static void ButtonTimerEventHandler(EventData *eventData)
 
 		// Update the static variable to use next time we enter this routine
 		buttonBState = newButtonBState;
+
+
 	}
 	
-#if (defined(IOT_CENTRAL_APPLICATION) || defined(IOT_HUB_APPLICATION))
 	// If either button was pressed, then enter the code to send the telemetry message
 	if (sendTelemetryButtonA || sendTelemetryButtonB) {
 
@@ -381,11 +423,90 @@ static void ButtonTimerEventHandler(EventData *eventData)
 
 		free(pjsonBuffer);
 	}
-#endif
+
 }
 
 // event handler data structures. Only the event handler field needs to be populated.
 static EventData buttonEventData = { .eventHandler = &ButtonTimerEventHandler };
+
+#ifdef M0_INTERCORE_COMMS
+//// ADC connection
+
+/// <summary>
+///     Handle socket event by reading incoming data from real-time capable application.
+/// </summary>
+static void SocketEventHandler(EventData *eventData)
+{
+	// Read response from real-time capable application.
+	char rxBuf[32];
+	union Analog_data
+	{
+		uint32_t u32;
+		uint8_t u8[4];
+	} analog_data;
+
+	int bytesReceived = recv(sockFd, rxBuf, sizeof(rxBuf), 0);
+
+	if (bytesReceived == -1) {
+		Log_Debug("ERROR: Unable to receive message: %d (%s)\n", errno, strerror(errno));
+		terminationRequired = true;
+	}
+
+	// Copy data from Rx buffer to analog_data union
+	for (int i = 0; i < sizeof(analog_data); i++)
+	{
+		analog_data.u8[i] = rxBuf[i];
+	}
+
+	// get voltage (2.5*adc_reading/4096)
+	// divide by 3650 (3.65 kohm) to get current (A)
+	// multiply by 1000000 to get uA
+	// divide by 0.1428 to get Lux (based on fluorescent light Fig. 1 datasheet)
+	// divide by 0.5 to get Lux (based on incandescent light Fig. 1 datasheet)
+	// We can simplify the factors, but for demostration purpose it's OK
+	light_sensor = ((float)analog_data.u32*2.5/4095)*1000000 / (3650*0.1428);
+
+	Log_Debug("Received %d bytes. ", bytesReceived);
+
+	Log_Debug("\n");	
+}
+
+/// <summary>
+///     Handle send timer event by writing data to the real-time capable application.
+/// </summary>
+static void TimerEventHandler(EventData *eventData)
+{
+	if (ConsumeTimerFdEvent(timerFd) != 0) {
+		terminationRequired = true;
+		return;
+	}
+
+	SendMessageToRTCore();
+}
+
+/// <summary>
+///     Helper function for TimerEventHandler sends message to real-time capable application.
+/// </summary>
+static void SendMessageToRTCore(void)
+{
+	static int iter = 0;
+
+	// Send "Read-ADC-%d" message to real-time capable application.
+	static char txMessage[32];
+	sprintf(txMessage, "Read-ADC-%d", iter++);
+	Log_Debug("Sending: %s\n", txMessage);
+
+	int bytesSent = send(sockFd, txMessage, strlen(txMessage), 0);
+	if (bytesSent == -1)
+	{
+		Log_Debug("ERROR: Unable to send message: %d (%s)\n", errno, strerror(errno));
+		terminationRequired = true;
+		return;
+	}
+}
+
+//// end ADC connection
+#endif 
 
 /// <summary>
 ///     Set up SIGTERM termination handler, initialize peripherals, and set up event handlers.
@@ -403,6 +524,52 @@ static int InitPeripheralsAndHandlers(void)
         return -1;
     }
 
+#ifdef M0_INTERCORE_COMMS
+	//// ADC connection
+	 	
+	// Open connection to real-time capable application.
+	sockFd = Application_Socket(rtAppComponentId);
+	if (sockFd == -1) 
+	{
+		Log_Debug("ERROR: Unable to create socket: %d (%s)\n", errno, strerror(errno));
+		Log_Debug("Real Time Core disabled or Component Id is not correct.\n");
+		Log_Debug("The program will continue without showing light sensor data.\n");
+		// Communication with RT core error
+		RTCore_status = 1;
+		//return -1;
+	}
+	else
+	{
+		// Communication with RT core success
+		RTCore_status = 0;
+		// Set timeout, to handle case where real-time capable application does not respond.
+		static const struct timeval recvTimeout = { .tv_sec = 5,.tv_usec = 0 };
+		int result = setsockopt(sockFd, SOL_SOCKET, SO_RCVTIMEO, &recvTimeout, sizeof(recvTimeout));
+		if (result == -1)
+		{
+			Log_Debug("ERROR: Unable to set socket timeout: %d (%s)\n", errno, strerror(errno));
+			return -1;
+		}
+
+		// Register handler for incoming messages from real-time capable application.
+		if (RegisterEventHandlerToEpoll(epollFd, sockFd, &socketEventData, EPOLLIN) != 0)
+		{
+			return -1;
+		}
+
+		// Register one second timer to send a message to the real-time core.
+		static const struct timespec sendPeriod = { .tv_sec = 1,.tv_nsec = 0 };
+		timerFd = CreateTimerFdAndAddToEpoll(epollFd, &sendPeriod, &timerEventData, EPOLLIN);
+		if (timerFd < 0)
+		{
+			return -1;
+		}
+		RegisterEventHandlerToEpoll(epollFd, timerFd, &timerEventData, EPOLLIN);
+	}
+
+	//// end ADC Connection
+#endif 
+	
 	if (initI2c() == -1) {
 		return -1;
 	}
@@ -447,10 +614,10 @@ static int InitPeripheralsAndHandlers(void)
 	if (buttonPollTimerFd < 0) {
 		return -1;
 	}
-
+	
 	// Tell the system about the callback function that gets called when we receive a device twin update message from Azure
 	AzureIoT_SetDeviceTwinUpdateCallback(&deviceTwinChangedHandler);
-
+	
 	// Tell the system about the callback function to call when we receive a Direct Method message from Azure
 	AzureIoT_SetDirectMethodCallback(&DirectMethodCall);
 
@@ -491,9 +658,10 @@ int main(int argc, char *argv[])
 	char ssid[128];
 	uint32_t frequency;
 	char bssid[20];
-	// Initialize the ssid array
-	memset(ssid, 0, 128);
 	
+	// Clear the ssid array
+	memset(ssid, 0, 128);
+
 #if (defined(IOT_CENTRAL_APPLICATION) || defined(IOT_HUB_APPLICATION))
 	if (argc == 2) {
 		Log_Debug("Setting Azure Scope ID %s\n", argv[1]);
@@ -524,15 +692,22 @@ int main(int argc, char *argv[])
 		// - a failure to setup the client is a fatal error.
 		if (!AzureIoT_SetupClient()) {
 			Log_Debug("ERROR: Failed to set up IoT Hub client\n");
+			Log_Debug("ERROR: Verify network connection and Azure Resource configurations\n");
 		}
 #endif 
 
 		WifiConfig_ConnectedNetwork network;
 		int result = WifiConfig_GetCurrentNetwork(&network);
-		if (result < 0) {
+
+		if (result < 0) 
+		{
 			// Log_Debug("INFO: Not currently connected to a WiFi network.\n");
+			strncpy(network_data.SSID, "Not Connected", 20);
+			network_data.frequency_MHz = 0;
+			network_data.rssi = 0;
 		}
-		else {
+		else 
+		{
 
 			frequency = network.frequencyMHz;
 			snprintf(bssid, JSON_BUFFER_SIZE, "%02x:%02x:%02x:%02x:%02x:%02x",
@@ -552,17 +727,32 @@ int main(int argc, char *argv[])
 #if (defined(IOT_CENTRAL_APPLICATION) || defined(IOT_HUB_APPLICATION))
 				// Note that we send up this data to Azure if it changes, but the IoT Central Properties elements only 
 				// show the data that was currenet when the device first connected to Azure.
-				checkAndUpdateDeviceTwin("ssid", &ssid, TYPE_STRING, true);
+				checkAndUpdateDeviceTwin("ssid", &ssid, TYPE_STRING, false);
 				checkAndUpdateDeviceTwin("freq", &frequency, TYPE_INT, false);
 				checkAndUpdateDeviceTwin("bssid", &bssid, TYPE_STRING, false);
 #endif 
 			}
+
+			//// OLED
+			memset(network_data.SSID, 0, WIFICONFIG_SSID_MAX_LENGTH);
+			if (network.ssidLength <= SSID_MAX_LEGTH)
+			{
+				strncpy(network_data.SSID, network.ssid, network.ssidLength);
+			}
+			else
+			{
+				strncpy(network_data.SSID, network.ssid, SSID_MAX_LEGTH);
+			}
+
+			network_data.frequency_MHz = network.frequencyMHz;
+
+			network_data.rssi = network.signalRssi;
 		}	   		 	  	  	   	
 #if (defined(IOT_CENTRAL_APPLICATION) || defined(IOT_HUB_APPLICATION))
 		if (iothubClientHandle != NULL && !versionStringSent) {
 
-#warning "If you need to upodate the version string do so in main.c ~line 375!"
-			checkAndUpdateDeviceTwin("versionString", "AvnetStarterKit-Hackster.io-V1.0", TYPE_STRING, false);
+			#warning "If you need to upodate the version string do so in main.c ~line 740!"
+				checkAndUpdateDeviceTwin("versionString", "AvnetStarterKit-Hackster.io-V2.0", TYPE_STRING, false);
 			versionStringSent = true;
 		}
 
