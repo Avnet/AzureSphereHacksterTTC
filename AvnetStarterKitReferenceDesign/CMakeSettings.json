@@ -3,8 +3,8 @@
     {
       "environment": "AzureSphere",
       "AzureSphereTargetApiSet": "4+Beta2001",
-      "AzureSphereTargetApplicationRuntimeVersion": 3,
-      "AzureSphereTargetBetaApis": "Beta1909",
+      "AzureSphereTargetApplicationRuntimeVersion": 4,
+      "AzureSphereTargetBetaApis": "Beta2001",
       "AzureSphereTargetHardwareDefinitionDirectory": "${projectDir}\\..\\Hardware\\avnet_mt3620_sk",
       "AzureSphereTargetHardwareDefinition": "avnet_mt3620_sk.json"
     }
