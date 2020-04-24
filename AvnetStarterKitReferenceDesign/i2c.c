@@ -242,7 +242,7 @@ void AccelTimerEventHandler(EventData *eventData)
 			}
 
 			snprintf(pjsonBuffer, JSON_BUFFER_SIZE, "{\"gX\":\"%.2lf\", \"gY\":\"%.2lf\", \"gZ\":\"%.2lf\", \"aX\": \"%.2f\", \"aY\": \"%.2f\", \"aZ\": \"%.2f\", \"pressure\": \"%.2f\", \"light_intensity\": \"%.2f\", \"altitude\": \"%.2f\", \"temp\": \"%.2f\",  \"rssi\": \"%d\"}",
-				angular_rate_dps[0], angular_rate_dps[1], angular_rate_dps[2], acceleration_mg[0], acceleration_mg[1], acceleration_mg[2], pressure_hPa, light_sensor, altitude, lsm6dsoTemperature_degC, network_data.rssi);
+				acceleration_mg[0], acceleration_mg[1], acceleration_mg[2], angular_rate_dps[0], angular_rate_dps[1], angular_rate_dps[2], pressure_hPa, light_sensor, altitude, lsm6dsoTemperature_degC, network_data.rssi);
 
 			Log_Debug("\n[Info] Sending telemetry: %s\n", pjsonBuffer);
 			AzureIoT_SendMessage(pjsonBuffer);
