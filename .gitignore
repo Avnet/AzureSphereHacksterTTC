@@ -60,3 +60,5 @@ dkms.conf
 /AvnetStarterKitReferenceDesign/out/ARM-Debug-3+Beta1909
 /AvnetStarterKitReferenceDesign/out/ARM-Debug-3Beta1909
 /InterCoreCommsMT3620_BMetal/.vs
+/AvnetStarterKitReferenceDesign/out
+/AvnetStarterKitReferenceDesign/app_manifest - Copy.json
