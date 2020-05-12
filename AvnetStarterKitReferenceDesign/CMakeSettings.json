@@ -1,12 +1,7 @@
 ﻿{
   "environments": [
     {
-      "environment": "AzureSphere",
-      "AzureSphereTargetApiSet": "4+Beta2001",
-      "AzureSphereTargetApplicationRuntimeVersion": 4,
-      "AzureSphereTargetBetaApis": "Beta2001",
-      "AzureSphereTargetHardwareDefinitionDirectory": "${projectDir}\\..\\Hardware\\avnet_mt3620_sk",
-      "AzureSphereTargetHardwareDefinition": "avnet_mt3620_sk.json"
+      "environment": "AzureSphere"
     }
   ],
   "configurations": [
@@ -14,30 +9,18 @@
       "name": "ARM-Debug",
       "generator": "Ninja",
       "configurationType": "Debug",
-      "inheritEnvironments": [ 
+      "inheritEnvironments": [
         "AzureSphere"
       ],
-      "buildRoot": "${projectDir}\\out\\${name}-${env.AzureSphereTargetApiSet}",
-      "installRoot": "${projectDir}\\install\\${name}-${env.AzureSphereTargetApiSet}",
-      "cmakeCommandArgs": "--no-warn-unused-cli",
+      "buildRoot": "${projectDir}\\out\\${name}",
+      "installRoot": "${projectDir}\\install\\${name}",
+      "cmakeToolchain": "${env.AzureSphereDefaultSDKDir}CMakeFiles\\AzureSphereToolchain.cmake",
       "buildCommandArgs": "-v",
       "ctestCommandArgs": "",
       "variables": [
         {
-          "name": "CMAKE_TOOLCHAIN_FILE",
-          "value": "${env.AzureSphereDefaultSDKDir}CMakeFiles\\AzureSphereToolchain.cmake"
-        },
-        {
           "name": "AZURE_SPHERE_TARGET_API_SET",
-          "value": "${env.AzureSphereTargetApiSet}"
-        },
-        {
-          "name": "AZURE_SPHERE_TARGET_HARDWARE_DEFINITION_DIRECTORY",
-          "value": "${env.AzureSphereTargetHardwareDefinitionDirectory}"
-        },
-        {
-          "name": "AZURE_SPHERE_TARGET_HARDWARE_DEFINITION",
-          "value": "${env.AzureSphereTargetHardwareDefinition}"
+          "value": "latest-lts"
         }
       ]
     },
@@ -45,30 +28,18 @@
       "name": "ARM-Release",
       "generator": "Ninja",
       "configurationType": "Release",
-      "inheritEnvironments": [ 
-        "AzureSphere" 
+      "inheritEnvironments": [
+        "AzureSphere"
       ],
-      "buildRoot": "${projectDir}\\out\\${name}-${env.AzureSphereTargetApiSet}",
-      "installRoot": "${projectDir}\\install\\${name}-${env.AzureSphereTargetApiSet}",
-      "cmakeCommandArgs": "--no-warn-unused-cli",
+      "buildRoot": "${projectDir}\\out\\${name}",
+      "installRoot": "${projectDir}\\install\\${name}",
+      "cmakeToolchain": "${env.AzureSphereDefaultSDKDir}CMakeFiles\\AzureSphereToolchain.cmake",
       "buildCommandArgs": "-v",
       "ctestCommandArgs": "",
       "variables": [
         {
-          "name": "CMAKE_TOOLCHAIN_FILE",
-          "value": "${env.AzureSphereDefaultSDKDir}CMakeFiles\\AzureSphereToolchain.cmake"
-        },
-        {
           "name": "AZURE_SPHERE_TARGET_API_SET",
-          "value": "${env.AzureSphereTargetApiSet}"
-        },
-        {
-          "name": "AZURE_SPHERE_TARGET_HARDWARE_DEFINITION_DIRECTORY",
-          "value": "${env.AzureSphereTargetHardwareDefinitionDirectory}"
-        },
-        {
-          "name": "AZURE_SPHERE_TARGET_HARDWARE_DEFINITION",
-          "value": "${env.AzureSphereTargetHardwareDefinition}"
+          "value": "latest-lts"
         }
       ]
     }
