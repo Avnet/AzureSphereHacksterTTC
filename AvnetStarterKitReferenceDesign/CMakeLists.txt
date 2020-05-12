@@ -2,10 +2,10 @@
 #  Licensed under the MIT License.
 
 cmake_minimum_required(VERSION 3.10)
-project(AvnetStarterKitReferenceDesign C)
+project(AvnetStarterKitReferenceDesign C) 
 
 azsphere_configure_tools(TOOLS_REVISION "20.04")
-azsphere_configure_api(TARGET_API_SET "5")
+azsphere_configure_api(TARGET_API_SET "5+Beta2004")
 
 # Create executable
 add_executable(${PROJECT_NAME} main.c epoll_timerfd_utilities.c oled.c parson.c azure_iot_utilities.c device_twin.c i2c.c lps22hh_reg.c lsm6dso_reg.c sd1306.c)

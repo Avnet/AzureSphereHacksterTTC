@@ -1,10 +1,9 @@
 {
   "SchemaVersion": 1,
-  "Name": "IntercoreComms_RTApp_MT3620_BareMetal",
+  "Name": "Avnet_RTApp_MT3620_BareMetal",
   "ComponentId": "005180bc-402f-4cb3-a662-72937dbcde47",
   "EntryPoint": "/bin/app",
   "Capabilities": {
-    //// A7 application connection
     "AllowedApplicationConnections": [ "685f13af-25a5-40b2-8dd8-8cbc253ecbd8" ],
     "Adc": [ "$AVNET_MT3620_SK_ADC_CONTROLLER0" ]
   },

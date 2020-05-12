@@ -2,11 +2,7 @@
   "environments": [
     {
       "environment": "AzureSphere",
-      "AzureSphereTargetApiSet": "4+Beta2001",
-      "AzureSphereTargetApplicationRuntimeVersion": 4,
-      "AzureSphereTargetBetaApis": "Beta2001",
-      "AzureSphereTargetHardwareDefinitionDirectory": "${projectDir}\\..\\Hardware\\avnet_mt3620_sk",
-      "AzureSphereTargetHardwareDefinition": "avnet_mt3620_sk.json"
+      "BuildAllBuildsAllRoots": "true"
     }
   ],
   "configurations": [
@@ -17,23 +13,15 @@
       "inheritEnvironments": [
         "AzureSphere"
       ],
-      "buildRoot": "${workspaceRoot}\\out\\${name}-${env.AzureSphereTargetApplicationRuntimeVersion}${env.AzureSphereTargetBetaApis}",
-      "installRoot": "${workspaceRoot}\\install\\${name}-${env.AzureSphereTargetApplicationRuntimeVersion}${env.AzureSphereTargetBetaApis}",
-      "cmakeCommandArgs": "--no-warn-unused-cli",
+      "buildRoot": "${projectDir}\\out\\${name}",
+      "installRoot": "${projectDir}\\install\\${name}",
+      "cmakeToolchain": "${env.AzureSphereDefaultSDKDir}CMakeFiles\\AzureSphereRTCoreToolchain.cmake",
       "buildCommandArgs": "-v",
       "ctestCommandArgs": "",
       "variables": [
         {
-          "name": "CMAKE_TOOLCHAIN_FILE",
-          "value": "${env.AzureSphereDefaultSDKDir}CMakeFiles\\AzureSphereRTCoreToolchain.cmake"
-        },
-        {
-          "name": "AZURE_SPHERE_TARGET_APPLICATION_RUNTIME_VERSION",
-          "value": "${env.AzureSphereTargetApplicationRuntimeVersion}"
-        },
-        {
-          "name": "AZURE_SPHERE_TARGET_BETA_APIS",
-          "value": "${env.AzureSphereTargetBetaApis}"
+          "name": "AZURE_SPHERE_TARGET_API_SET",
+          "value": "latest-beta"
         },
         {
           "name": "ARM_GNU_PATH",
@@ -48,23 +36,15 @@
       "inheritEnvironments": [
         "AzureSphere"
       ],
-      "buildRoot": "${workspaceRoot}\\out\\${name}-${env.AzureSphereTargetApplicationRuntimeVersion}${env.AzureSphereTargetBetaApis}",
-      "installRoot": "${workspaceRoot}\\install\\${name}-${env.AzureSphereTargetApplicationRuntimeVersion}${env.AzureSphereTargetBetaApis}",
-      "cmakeCommandArgs": "--no-warn-unused-cli",
+      "buildRoot": "${projectDir}\\out\\${name}",
+      "installRoot": "${projectDir}\\install\\${name}",
+      "cmakeToolchain": "${env.AzureSphereDefaultSDKDir}CMakeFiles\\AzureSphereRTCoreToolchain.cmake",
       "buildCommandArgs": "-v",
       "ctestCommandArgs": "",
       "variables": [
         {
-          "name": "CMAKE_TOOLCHAIN_FILE",
-          "value": "${env.AzureSphereDefaultSDKDir}CMakeFiles\\AzureSphereRTCoreToolchain.cmake"
-        },
-        {
-          "name": "AZURE_SPHERE_TARGET_APPLICATION_RUNTIME_VERSION",
-          "value": "${env.AzureSphereTargetApplicationRuntimeVersion}"
-        },
-        {
-          "name": "AZURE_SPHERE_TARGET_BETA_APIS",
-          "value": "${env.AzureSphereTargetBetaApis}"
+          "name": "AZURE_SPHERE_TARGET_API_SET",
+          "value": "latest-beta"
         },
         {
           "name": "ARM_GNU_PATH",
