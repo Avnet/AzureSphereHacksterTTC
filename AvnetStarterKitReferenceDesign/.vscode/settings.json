@@ -1,15 +1,12 @@
 {
-    
-    "cmake.generator": "Ninja",
-    "cmake.buildDirectory": "${workspaceRoot}/out/${buildType}-${command:azuresphere.AzureSphereTargetApiSet}",
-    "cmake.buildToolArgs": [ "-v" ],
-    "cmake.configureArgs": [ "--no-warn-unused-cli" ],
+  "cmake.generator": "Ninja",
+  "cmake.buildDirectory": "${workspaceRoot}/out/${buildType}-${command:azuresphere.AzureSphereTargetApiSet}",
+  "cmake.buildToolArgs": [ "-v" ],
+  "cmake.configureArgs": [ "--no-warn-unused-cli" ],
     "cmake.configureSettings": {
-      "CMAKE_TOOLCHAIN_FILE": "${command:azuresphere.AzureSphereSdkDir}/CMakeFiles/AzureSphereToolchain.cmake",
-      "AZURE_SPHERE_TARGET_HARDWARE_DEFINITION_DIRECTORY": "${workspaceRoot}/../Hardware/avnet_mt3620_sk",
-      "AZURE_SPHERE_TARGET_HARDWARE_DEFINITION": "avnet_mt3620_sk.json",
-      "AZURE_SPHERE_TARGET_API_SET": "4+Beta2001"
-    },
-    "cmake.configureOnOpen": true,
-    "C_Cpp.default.configurationProvider": "vector-of-bool.cmake-tools"
+    "CMAKE_TOOLCHAIN_FILE": "${command:azuresphere.AzureSphereSdkDir}/CMakeFiles/AzureSphereToolchain.cmake",
+    "AZURE_SPHERE_TARGET_API_SET": "latest-beta"
+  },
+  "cmake.configureOnOpen": true,
+  "C_Cpp.default.configurationProvider": "vector-of-bool.cmake-tools"
 }
