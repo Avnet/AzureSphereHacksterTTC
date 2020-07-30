@@ -39,7 +39,7 @@
       "variables": [
         {
           "name": "AZURE_SPHERE_TARGET_API_SET",
-          "value": "5+Beta2004"
+          "value": "6+Beta2007"
         }
       ]
     }
