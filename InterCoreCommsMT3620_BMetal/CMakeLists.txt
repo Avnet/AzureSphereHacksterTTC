@@ -5,7 +5,6 @@ cmake_minimum_required(VERSION 3.11)
 project(AvnetStarterKitReferenceDesign_RTApp_MT3620_BareMetal C)
 
 azsphere_configure_tools(TOOLS_REVISION "20.04")
-azsphere_configure_api(TARGET_API_SET "5+Beta2004")
 
 # Create executable
 add_executable(${PROJECT_NAME} main.c mt3620-intercore.c mt3620-timer-poll.c mt3620-uart-poll.c mt3620-adc.c)
