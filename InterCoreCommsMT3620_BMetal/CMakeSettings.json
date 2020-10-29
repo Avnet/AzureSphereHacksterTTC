@@ -40,7 +40,7 @@
       "variables": [
         {
           "name": "AZURE_SPHERE_TARGET_API_SET",
-          "value": "5+Beta2004"
+          "value": "latest-lts"
         },
         {
           "name": "ARM_GNU_PATH",
