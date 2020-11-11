@@ -111,7 +111,7 @@ void AccelTimerEventHandler(EventData *eventData)
 	uint8_t reg;
 	lps22hh_reg_t lps22hhReg;
 
-#if (defined(IOT_CENTRAL_APPLICATION) || defined(IOT_HUB_APPLICATION))
+#ifdef IOT_HUB_APPLICATION
 	static bool firstPass = true;
 #endif
 	// Consume the event.  If we don't do this we'll come right back 
@@ -228,7 +228,7 @@ void AccelTimerEventHandler(EventData *eventData)
 	//// OLED
 	update_oled();
 #endif 
-#if (defined(IOT_CENTRAL_APPLICATION) || defined(IOT_HUB_APPLICATION))
+#ifdef IOT_HUB_APPLICATION
 
 		// We've seen that the first read of the Accelerometer data is garbage.  If this is the first pass
 		// reading data, don't report it to Azure.  Since we're graphing data in Azure, this data point

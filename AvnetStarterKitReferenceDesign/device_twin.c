@@ -48,13 +48,6 @@ static const char cstrDeviceTwinJsonInteger[] = "{\"%s\": %d}";
 static const char cstrDeviceTwinJsonFloat[] = "{\"%s\": %.2f}";
 static const char cstrDeviceTwinJsonBool[] = "{\"%s\": %s}";
 static const char cstrDeviceTwinJsonString[] = "{\"%s\": \"%s\"}";
-#ifdef IOT_CENTRAL_APPLICATION
-static const char cstrDeviceTwinJsonFloatIOTC[] = "{\"%s\": {\"value\": %.2f, \"status\" : \"completed\" , \"desiredVersion\" : %d }}";
-static const char cstrDeviceTwinJsonBoolIOTC[] = "{\"%s\": {\"value\": %s, \"status\" : \"completed\" , \"desiredVersion\" : %d }}";
-static const char cstrDeviceTwinJsonIntegerIOTC[] = "{\"%s\": {\"value\": %d, \"status\" : \"completed\" , \"desiredVersion\" : %d }}";
-static const char cstrDeviceTwinJsonStringIOTC[]  = "{\"%s\": {\"value\": \"%s\", \"status\" : \"completed\" , \"desiredVersion\" : %d }}";
-#endif 
-
 static int desiredVersion = 0;
 
 // Define each device twin key that we plan to catch, process, and send reported property for.
@@ -98,41 +91,16 @@ void checkAndUpdateDeviceTwin(char* property, void* value, data_type_t type, boo
 
 		switch (type) {
 		case TYPE_BOOL:
-#ifdef IOT_CENTRAL_APPLICATION
-			if (ioTCentralFormat) {
-				nJsonLength = snprintf(pjsonBuffer, JSON_BUFFER_SIZE, cstrDeviceTwinJsonBoolIOTC, property, *(bool*)value ? "true" : "false", desiredVersion);
-			}
-			else
-#endif 
-				nJsonLength = snprintf(pjsonBuffer, JSON_BUFFER_SIZE, cstrDeviceTwinJsonBool, property, *(bool*)value ? "true" : "false", desiredVersion);
-
+			nJsonLength = snprintf(pjsonBuffer, JSON_BUFFER_SIZE, cstrDeviceTwinJsonBool, property, *(bool*)value ? "true" : "false", desiredVersion);
 			break;
 		case TYPE_FLOAT:
-#ifdef IOT_CENTRAL_APPLICATION			
-			if (ioTCentralFormat) {
-				nJsonLength = snprintf(pjsonBuffer, JSON_BUFFER_SIZE, cstrDeviceTwinJsonFloatIOTC, property, *(float*)value, desiredVersion);
-			}
-			else
-#endif 
-				nJsonLength = snprintf(pjsonBuffer, JSON_BUFFER_SIZE, cstrDeviceTwinJsonFloat, property, *(float*)value, desiredVersion);
+			nJsonLength = snprintf(pjsonBuffer, JSON_BUFFER_SIZE, cstrDeviceTwinJsonFloat, property, *(float*)value, desiredVersion);
 			break;
 		case TYPE_INT:
-#ifdef IOT_CENTRAL_APPLICATION		
-			if (ioTCentralFormat) {
-				nJsonLength = snprintf(pjsonBuffer, JSON_BUFFER_SIZE, cstrDeviceTwinJsonIntegerIOTC, property, *(int*)value, desiredVersion);
-			}
-			else
-#endif
-				nJsonLength = snprintf(pjsonBuffer, JSON_BUFFER_SIZE, cstrDeviceTwinJsonInteger, property, *(int*)value, desiredVersion);
+			nJsonLength = snprintf(pjsonBuffer, JSON_BUFFER_SIZE, cstrDeviceTwinJsonInteger, property, *(int*)value, desiredVersion);
 			break;
 		case TYPE_STRING:
-#ifdef IOT_CENTRAL_APPLICATION			
-			if (ioTCentralFormat) {
-				nJsonLength = snprintf(pjsonBuffer, JSON_BUFFER_SIZE, cstrDeviceTwinJsonStringIOTC, property, (char*)value, desiredVersion);
-			}
-			else
-#endif 
-				nJsonLength = snprintf(pjsonBuffer, JSON_BUFFER_SIZE, cstrDeviceTwinJsonString, property, (char*)value, desiredVersion);
+			nJsonLength = snprintf(pjsonBuffer, JSON_BUFFER_SIZE, cstrDeviceTwinJsonString, property, (char*)value, desiredVersion);
 			break;
 		}
 
@@ -157,50 +125,6 @@ void deviceTwinChangedHandler(JSON_Object * desiredProperties)
 	{
 		desiredVersion = (int)json_object_get_number(desiredProperties, "$version");
 	}
-
-#ifdef IOT_CENTRAL_APPLICATION		
-
-	for (int i = 0; i < (sizeof(twinArray) / sizeof(twin_t)); i++) {
-
-		if (json_object_has_value(desiredProperties, twinArray[i].twinKey) != 0)
-		{
-
-			JSON_Object *currentJSONProperties = json_object_dotget_object(desiredProperties, twinArray[i].twinKey);
-
-			switch (twinArray[i].twinType) {
-			case TYPE_BOOL:
-				*(bool*)twinArray[i].twinVar = (bool)json_object_get_boolean(currentJSONProperties, "value");
-				result = GPIO_SetValue(*twinArray[i].twinFd, twinArray[i].active_high ? (GPIO_Value)*(bool*)twinArray[i].twinVar : !(GPIO_Value)*(bool*)twinArray[i].twinVar);
-
-				if (result != 0) {
-					Log_Debug("Fd: %d\n", twinArray[i].twinFd);
-					Log_Debug("FAILURE: Could not set GPIO_%d, %d output value %d: %s (%d).\n", twinArray[i].twinGPIO, twinArray[i].twinFd, (GPIO_Value)*(bool*)twinArray[i].twinVar, strerror(errno), errno);
-					terminationRequired = true;
-				}
-				Log_Debug("Received device update. New %s is %s\n", twinArray[i].twinKey, *(bool*)twinArray[i].twinVar ? "true" : "false");
-				checkAndUpdateDeviceTwin(twinArray[i].twinKey, twinArray[i].twinVar, TYPE_BOOL, true);
-				break;
-			case TYPE_FLOAT:
-				*(float*)twinArray[i].twinVar = (float)json_object_get_number(currentJSONProperties, "value");
-				Log_Debug("Received device update. New %s is %0.2f\n", twinArray[i].twinKey, *(float*)twinArray[i].twinVar);
-				checkAndUpdateDeviceTwin(twinArray[i].twinKey, twinArray[i].twinVar, TYPE_FLOAT, true);
-				break;
-			case TYPE_INT:
-				*(int*)twinArray[i].twinVar = (int)json_object_get_number(currentJSONProperties, "value");
-				Log_Debug("Received device update. New %s is %d\n", twinArray[i].twinKey, *(int*)twinArray[i].twinVar);
-				checkAndUpdateDeviceTwin(twinArray[i].twinKey, twinArray[i].twinVar, TYPE_INT, true);
-				break;
-
-			case TYPE_STRING:
-				Log_Debug(">>> STRING!");
-				strcpy((char*)twinArray[i].twinVar, json_object_get_string(currentJSONProperties, "value"));
-				Log_Debug("Received device update. New %s is %s\n", twinArray[i].twinKey, (char*)twinArray[i].twinVar);
-				checkAndUpdateDeviceTwin(twinArray[i].twinKey, twinArray[i].twinVar, TYPE_STRING, true);
-				break;
-			}
-		}
-	}
-#else // !IOT_CENTRAL_APPLICATION		
 
 	for (int i = 0; i < (sizeof(twinArray) / sizeof(twin_t)); i++) {
 
@@ -239,6 +163,4 @@ void deviceTwinChangedHandler(JSON_Object * desiredProperties)
 			}
 		}
 	}
-#endif 
-
 }

@@ -123,7 +123,7 @@ static EventData socketEventData = { .eventHandler = &SocketEventHandler };
 static GPIO_Value_Type buttonAState = GPIO_Value_High;
 static GPIO_Value_Type buttonBState = GPIO_Value_High;
 
-#if (defined(IOT_CENTRAL_APPLICATION) || defined(IOT_HUB_APPLICATION))
+#ifdef IOT_HUB_APPLICATION
 	bool versionStringSent = false;
 #endif
 
@@ -659,7 +659,7 @@ int main(int argc, char *argv[])
 	// Clear the ssid array
 	memset(ssid, 0, 128);
 
-#if (defined(IOT_CENTRAL_APPLICATION) || defined(IOT_HUB_APPLICATION))
+#ifdef IOT_HUB_APPLICATION
 	if (argc == 2) {
 		Log_Debug("Setting Azure Scope ID %s\n", argv[1]);
 		strncpy(scopeId, argv[1], SCOPEID_LENGTH);
@@ -681,7 +681,7 @@ int main(int argc, char *argv[])
             terminationRequired = true;
         }
 
-#if (defined(IOT_CENTRAL_APPLICATION) || defined(IOT_HUB_APPLICATION))
+#ifdef IOT_HUB_APPLICATION
 		// Setup the IoT Hub client.
 		// Notes:
 		// - it is safe to call this function even if the client has already been set up, as in
@@ -721,7 +721,7 @@ int main(int argc, char *argv[])
 				Log_Debug("bssid: %s\n", bssid);
 				networkConfigSent = true;
 
-#if (defined(IOT_CENTRAL_APPLICATION) || defined(IOT_HUB_APPLICATION))
+#ifdef IOT_HUB_APPLICATION
 				// Note that we send up this data to Azure if it changes, but the IoT Central Properties elements only 
 				// show the data that was currenet when the device first connected to Azure.
 				checkAndUpdateDeviceTwin("ssid", &ssid, TYPE_STRING, false);
@@ -745,7 +745,7 @@ int main(int argc, char *argv[])
 
 			network_data.rssi = network.signalRssi;
 		}	   		 	  	  	   	
-#if (defined(IOT_CENTRAL_APPLICATION) || defined(IOT_HUB_APPLICATION))
+#ifdef IOT_HUB_APPLICATION
 		if (iothubClientHandle != NULL && !versionStringSent) {
 
 			#warning "If you need to upodate the version string do so in main.c ~line 740!"
