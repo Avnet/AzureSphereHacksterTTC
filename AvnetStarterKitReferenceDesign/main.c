@@ -461,7 +461,7 @@ static void SocketEventHandler(EventData *eventData)
 	// divide by 0.1428 to get Lux (based on fluorescent light Fig. 1 datasheet)
 	// divide by 0.5 to get Lux (based on incandescent light Fig. 1 datasheet)
 	// We can simplify the factors, but for demostration purpose it's OK
-	light_sensor = ((float)analog_data.u32*2.5/4095)*1000000 / (3650*0.1428);
+	light_sensor = (float)(analog_data.u32*2.5/4095)*1000000 / (float)(3650*0.1428);
 
 	Log_Debug("Received %d bytes. ", bytesReceived);
 
@@ -748,7 +748,7 @@ int main(int argc, char *argv[])
 #ifdef IOT_HUB_APPLICATION
 		if (iothubClientHandle != NULL && !versionStringSent) {
 
-			#warning "If you need to upodate the version string do so in main.c ~line 740!"
+			#warning "If you need to upodate the version string do so in main.c ~line 752!"
 				checkAndUpdateDeviceTwin("versionString", "AvnetStarterKit-Hackster.io-V2.0", TYPE_STRING, false);
 			versionStringSent = true;
 		}

@@ -183,6 +183,10 @@ static const char *getReasonString(IOTHUB_CLIENT_CONNECTION_STATUS_REASON reason
 	case IOTHUB_CLIENT_CONNECTION_OK:
 		reasonString = "IOTHUB_CLIENT_CONNECTION_OK";
 		break;
+	case IOTHUB_CLIENT_CONNECTION_NO_PING_RESPONSE:
+		reasonString = "IOTHUB_CLIENT_CONNECTION_NO_PING_RESPONSE";
+		break;
+	
 	}
 	return reasonString;
 }

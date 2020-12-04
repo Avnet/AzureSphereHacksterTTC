@@ -839,7 +839,7 @@ void sd1306_refresh(void)
   * @brief  Draw a image in OLED buffer
   * @retval None.
   */
-void sd1306_draw_img(uint8_t * ptr_img)
+void sd1306_draw_img(const uint8_t * ptr_img)
 {
 	uint16_t i;
 	for (i = 0; i < BUFFER_SIZE; i++)

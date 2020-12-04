@@ -762,11 +762,5 @@ const unsigned char Image_avnet_bmp[BUFFER_SIZE] =
 
 uint8_t get_str_size(uint8_t * str)
 {
-	uint8_t legth = 0;
-	while (*(str) != NULL)
-	{
-		str++;
-		legth++;
-	}
-	return legth;
+	return strlen(str);
 }

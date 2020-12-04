@@ -208,7 +208,7 @@ extern void sd1306_refresh(void);
   * @brief  Draw a image in OLED buffer
   * @retval None.
   */
-extern void sd1306_draw_img(uint8_t * ptr_img);
+extern void sd1306_draw_img(const uint8_t * ptr_img);
 
 /**
   * @brief  Set all buffer's bytes to zero

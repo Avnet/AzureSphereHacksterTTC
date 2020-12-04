@@ -691,7 +691,7 @@ static int32_t lsm6dso_read_lps22hh_cx(void* ctx, uint8_t reg, uint8_t* data, ui
 	lsm6dso_xl_data_rate_set(&dev_ctx, LSM6DSO_XL_ODR_OFF);
 
 	// Read the data from the device
-	lsm6dso_sh_read_data_raw_get(&dev_ctx, data, (uint8_t)len);
+	lsm6dso_sh_read_data_raw_get(&dev_ctx, (lsm6dso_emb_sh_read_t*) data, (uint8_t)len);
 
 #ifdef ENABLE_READ_WRITE_DEBUG
 	Log_Debug("Read %d bytes: ", len);
